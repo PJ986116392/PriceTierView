@@ -3,8 +3,9 @@ from bs4 import BeautifulSoup
 from urllib.parse import urlencode
 from urllib.parse import quote_plus
 from DecryptToken import getSearchToken
-import json
+import json,random
 import numpy as np
+import time
 
 def getToken():
     # 从首页获得token，xlstoken
@@ -60,8 +61,31 @@ if __name__ == '__main__':
     token = getSearchToken(webToken)
     xlsToken = getSearchToken(webXlsToken)
 
+    # 处理url
+    # https://soic.oneyac.com/agg_attr?
+    # callback=jQuery1124019459650479182689_1589471189093
+    # &paramsDTO={"aggFields":"brand","page":0,"pageSize":10,"supplierId":"1","categoryId":"1207","keyword":"","brand_id_filters[]":[],"agg_attr_name_filters[]":["封装/外壳","容值","偏差","电压"],"token":"on@hol11jiwZeyidrCS!xm@32xqMGUOLLdPJHG7dcK"1wyno"qxlhs8W7YkC4kMZF7V0Jeyac$der","xlsToken":"on@hol11WQ3ZM8JQHuz!xm@5wO7nSIii4OC1EbhePg"1wyno"VmnoQjqhbpLm2hRoLEwceyac$der","attr_封装/外壳[]":["0402"]}
+    # &_=1589471189094
+    # 由此可以看出，URL分为三个部分
+    #   第一部分：searchApi （https://soic.oneyac.com/search?） or aggAttrApi （https://soic.oneyac.com/agg_attr?）
+    #   第二部分：回调函数callback
+    #   第二部分：元器件请求规格 + token + xlstoken
+    #   第三部分：参数_ (多次观看数据，可以猜测为时间秒数)
+
+    # 搜索引擎
+    aggAttrApi = 'https://soic.oneyac.com/agg_attr?'
+    searchApi = 'https://soic.oneyac.com/search?'
+    # 处理时间秒数
+    Time = int(time.time()*1000)
+    timeStr = '_=' + str(Time)
+    # 处理回调函数
+    m = '1.12.4'
+    callBack = 'callback=jQuery' + m + str(random.uniform(0,1))
+    callBackstr = str(callBack).replace('.','') + '_' + str(Time-1)
+    #print(callBackstr)
+
     #规格参数
-    LIST_FORM = {
+    specAttr = {
         "aggFields":"brand",
         "page":0,
         "pageSize":10,
@@ -76,44 +100,43 @@ if __name__ == '__main__':
         #"attr_封装/外壳[]": ["0402"], "attr_容值[]": ["100nF"], "attr_偏差[]": ["±20%"], "attr_电压[]": ["16V"],
         # "attr_温度系数(材质)[]": ["X7R"]},
     }
-
     #{"aggFields": "brand", "page": "0", "pageSize": 10, "supplierId": "1", "categoryId": "1207", "keyword": "", "brand_id_filters[]": [], "agg_attr_name_filters[]": ["\u5c01\u88c5/\u5916\u58f3", "\u5bb9\u503c", "\u504f\u5dee", "\u7535\u538b"], "token": "XXX", "xlsToken": "XXX"}
-    Query_String = json.dumps(LIST_FORM)
+    specAttrstr = json.dumps(specAttr)
     #删除字典更换为字符串后多余的空号
     # agg_attr_name_filters[]中\u5bb9\u503c等字符转为中文
-    Query_String = Query_String.replace(' ','')
+    specAttrstr = specAttrstr.replace(' ','')
 
     # url:https://blog.csdn.net/u014519194/article/details/53927149
-    Query_String = Query_String.encode('utf-8').decode('unicode_escape')    #python3以上取消了decode，所以你直接想st.decode(“utf-8”)的话会报str没有decode方法的错
+    specAttrstr = specAttrstr.encode('utf-8').decode('unicode_escape')    #python3以上取消了decode，所以你直接想st.decode(“utf-8”)的话会报str没有decode方法的错
 
-    #%7B%22aggFields%22%3A%22brand%22%2C%22page%22%3A%220%22%2C%22pageSize%22%3A10%2C%22
-    # supplierId%22%3A%221%22%2C%22categoryId%22%3A%221207%22%2C%22keyword%22%3A%22%22%2C%22
-    # brand_id_filters%5B%5D%22%3A%5B%5D%2C%22
-    # agg_attr_name_filters%5B%5D%22%3A%5B%22%E5%B0%81%E8%A3%85/%E5%A4%96%E5%A3%B3%22%2C%22%E5%AE%B9%E5%80%BC%22%2C%22%E5%81%8F%E5%B7%AE%22%2C%22%E7%94%B5%E5%8E%8B%22%5D%2C%22
-    # token%22%3A%22on%40hol11LfplRXgK5XI%21xm%40rajzJodmXWGvCdQKR1wynoK5vGPcbUIvdvsM9w4CYKCIeyac%24der%22%2C%22
-    # xlsToken%22%3A%22on%40hol114nEmSXy8TiO%21xm%40vm2bFDgxTWnRRxM6g1wynodKhEoaOqm5CwxBIKIi0tXMeyac%24der%22%7D
     # https://www.cnblogs.com/lu-test/p/9962640.html
-    jQueryStr = quote_plus(Query_String)          #quote 除了 -._/09AZaz ,都会进行编码。quote_plus 比 quote 『更进』一些，它还会编码 /
-    jQueryStr = jQueryStr.replace('%21','!')      #查看原url可知，xlstoken中的’！‘并未被转码，将其转回
+    specAttrstr = quote_plus(specAttrstr)             #quote 除了 -._/09AZaz ,都会进行编码。quote_plus 比 quote 『更进』一些，它还会编码 /
+    specAttrstr = specAttrstr.replace('%21','!')      #查看原url可知，xlstoken中的’！‘并未被转码，将其转回
+    paramsDTO = 'paramsDTO=' + specAttrstr
 
-    searchUrl = 'https://soic.oneyac.com/agg_attr?callback=jQuery112404052801225740813_1588681147416&paramsDTO=' + jQueryStr
-    print(searchUrl)
-    cookie_str = r'Hm_lvt_2d41db31b18b75206ed7c59c33f5c313=1587999285,1588575396; Hm_lpvt_2d41db31b18b75206ed7c59c33f5c313=1588681149'
+    url = searchApi + callBackstr + '&' + paramsDTO + '&' + timeStr
+    print(url)
+    cookie_str = r'Hm_lvt_2d41db31b18b75206ed7c59c33f5c313=1587999285,1588575396; Hm_lpvt_2d41db31b18b75206ed7c59c33f5c313=1588775854'
     headers = {
                 'Accept':'*/*',
                 'Accept-Encoding':'gzip, deflate, br',
-                'Accept-Language':'zh-CN,zh;q=0.9',
+                'Accept-Language':'zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2',
                 'Connection':'keep - alive',
+                'Cookie':'Hm_lvt_2d41db31b18b75206ed7c59c33f5c313=1587999285,1588575396,1588775801; Hm_lpvt_2d41db31b18b75206ed7c59c33f5c313=1588775854',
                 'Host': 'soic.oneyac.com',
-                'Referer': 'https://www.oneyac.com/category/1223.html',
-                'Sec-Fetch-Dest':'script',
-                'Sec - Fetch - Mode':'no - cors',
-                'Sec - Fetch - Site':'same - site',
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.122 Safari/537.36',
+                'Referer': 'https://www.oneyac.com/category/1207.html',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:75.0) Gecko/20100101 Firefox/75.0',
                }
+    try:
+        resp = requests.get(url=url,headers = headers)
+        if resp.status_code == 200 :
+            print(resp.text)
+    except:
+        print('链接失败')
+    #result = gethtmltext('get',searchUrl,cookie_str,**headers)
+    #print(result)
 
-    result = gethtmltext('get',searchUrl,cookie_str,**headers)
-    print(result)
+
 
 
 
