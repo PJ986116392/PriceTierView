@@ -58,11 +58,12 @@ def getUrl(api,specAttr):
 
     # {"aggFields": "brand", "page": "0", "pageSize": 10, "supplierId": "1", "categoryId": "1207", "keyword": "", "brand_id_filters[]": [], "agg_attr_name_filters[]": ["\u5c01\u88c5/\u5916\u58f3", "\u5bb9\u503c", "\u504f\u5dee", "\u7535\u538b"], "token": "XXX", "xlsToken": "XXX"}
     aggAttrstr = json.dumps(aggAttr)
+
     # 删除字典更换为字符串后多余的空号
     aggAttrstr = aggAttrstr.replace(' ', '')
+
     # agg_attr_name_filters[]中\u5bb9\u503c等字符转为中文,参考url:https://blog.csdn.net/u014519194/article/details/53927149
-    aggAttrstr = aggAttrstr.encode('utf-8').decode(
-        'unicode_escape')  # python3以上取消了decode，所以你直接想st.decode(“utf-8”)的话会报str没有decode方法的错
+    aggAttrstr = aggAttrstr.encode('utf-8').decode('unicode_escape')  # python3以上取消了decode，所以你直接想st.decode(“utf-8”)的话会报str没有decode方法的错
 
     # url 编码，参考url：https://www.cnblogs.com/lu-test/p/9962640.html
     aggAttrstr = quote_plus(aggAttrstr)  # quote 除了 -._/09AZaz ,都会进行编码。quote_plus 比 quote 『更进』一些，它还会编码 /
@@ -71,12 +72,17 @@ def getUrl(api,specAttr):
     paramsDTO = 'paramsDTO=' + aggAttrstr
 
     url = api + callBackstr + '&' + paramsDTO + '&' + timeStr
-    #print(url)
     return url
 
-def getJosntext(aggAttrApi, specAttr):
-
-    url= getUrl(aggAttrApi, specAttr)
+def getJosn(api, specAttr):
+    '''
+    :param api:             url 链接
+    :param specAttr:        元器件规格
+    :return:
+    如果api是搜索电容价格并且元器件参数正确，返回价格最低的品牌电容的相关信息（字典）
+    如果api是过滤元器件参数，则返回过滤结果（字典）
+    '''
+    url= getUrl(api, specAttr)
 
     headers = {
         'Accept': '*/*',
@@ -90,17 +96,113 @@ def getJosntext(aggAttrApi, specAttr):
     }
     try:
         resp = requests.get(url=url, headers=headers)
-        if resp.status_code == 200:
-            print(resp.text)
-            return resp.text
+        if resp.status_code == 200 and 'search' in url:
+            #print(resp.text)
+            Json = loads_jsonp(resp.text)
+            result = Json['page']['content'][0]
+            return result
+        elif resp.status_code == 200 and 'agg' in url:
+            Json = loads_jsonp(resp.text)
+            result = Json['filterConditions']
+            return result
     except:
-        print('链接失败')
+        print('获取价格失败')
+        exit()
 
-if __name__ == '__main__':
-    # 搜索引擎
+def loads_jsonp(_jsonp):
+    try:
+        return json.loads(re.match(".*?({.*}).*",_jsonp,re.S).group(1))
+    except:
+        raise ValueError('Invalid Input')
+
+def specJudgment(aggAttrApi,capacitance,package,voltage,accuracy):
+    # 初始化封装
+    initPackage = ['0201','0402','0603','0805','1206']
+    specAttr = {
+        "aggFields": "brand",
+        "page": 0,
+        "pageSize": 10,
+        "supplierId": "1",
+        "categoryId": "1207",
+        "keyword": "",
+        "brand_id_filters[]": [],
+        "agg_attr_name_filters[]": ["封装/外壳", "容值", "偏差", "电压"],
+        "token": 'on@hol113ekipbgatp2!xm@cn4oe5t6pubg4rgj61wynozdd9jxhqmcoe4lo3oxwbiheyac$der',
+        "xlsToken": 'on@hol11ywj5da0witd!xm@533x09zspzeosto9q1wynozi33ezuo547d14w73dz6deeyac$der'
+    }
+
+    # 检查封装
+    if package not in initPackage :
+        msgbox = '电容封装有误（不是0201，0402，0603，0805，1206物料）'
+        return False,msgbox
+    specAttr.update({"attr_封装/外壳[]": [package]})
+    filterConditions = getJosn(aggAttrApi, specAttr)
+
+    # 检查封装 + 电压
+    if voltage not in filterConditions['电压']:
+        msgbox = '电容电压有误，正确电压' + str(filterConditions['电压'])
+        return False,msgbox
+    specAttr.update({"attr_电压[]": [voltage]})
+    filterConditions = getJosn(aggAttrApi, specAttr)
+
+    # 检查封装 + 电压 + 偏差
+    if accuracy not in filterConditions['偏差']:
+        msgbox = '电容偏差有误，正确偏差' + str(filterConditions['偏差'])
+        return False, msgbox
+    specAttr.update({"attr_偏差[]": [accuracy]})
+    filterConditions = getJosn(aggAttrApi, specAttr)
+    # 检查封装 + 电压 + 偏差 + 容量
+    if capacitance not in filterConditions['容值']:
+        msgbox = '电容容值有误，正确容值' + str(filterConditions['容值'])
+        return False,msgbox
+    else:
+        msgbox = '电容规格正确!'
+        return True, msgbox
+
+
+def getPrice(orderCount,capacitance,package,voltage,accuracy):
+    '''
+    从唯详商城获取指定电容最低价格
+    :param orderCount:      采购数量
+    :param capacitance:     电容容量
+    :param package:         电容封装
+    :param voltage:         电容耐压
+    :param accuracy:        电容精度
+    :return:返回值
+    productPrice = {
+        'Flag':True,         # 电容规格是否正确
+        '品牌': '',          # 查询到最低价格的品牌
+        'price': '',        # 查询到的最低价格
+        'Msgbox':''         # 提示字符串
+    }
+    '''
+
+    # 判断请购数量
+    if orderCount<1 :
+        print('采购数量有误，请确认！')
+        exit()
+
+    # 初始化返回值
+    productPrice = {
+        'Flag':True,
+        '品牌': '',
+        'price': '',
+        'Msgbox':''
+    }
+    priceArr = []
+
+    # 设置搜索引擎
     aggAttrApi = 'https://soic.oneyac.com/agg_attr?'
     searchApi = 'https://soic.oneyac.com/search?'
 
+    flag,msg = specJudgment(aggAttrApi, capacitance, package, voltage, accuracy)
+    productPrice['Msgbox'] = msg
+    # 判断输入电容规格参数是否有误
+    if  flag == False:
+        productPrice['Flag'] = False
+        return productPrice
+
+    # 电容参数正确，执行查找价格
     webToken,webXlstoken = getToken()
     token = getSearchToken(webToken)
     xlstoken = getSearchToken(webXlstoken)
@@ -117,15 +219,50 @@ if __name__ == '__main__':
         "agg_attr_name_filters[]": ["封装/外壳", "容值", "偏差", "电压"],
         "token": token,
         "xlsToken": xlstoken,
-        "attr_封装/外壳[]": ["0402"],
-        "attr_电压[]":["16V"],
-        "attr_容值[]": ["100nF"],
-        "attr_偏差[]": ["±20%"]
+        "attr_封装/外壳[]":[package],
+        "attr_电压[]": [voltage],
+        "attr_容值[]": [capacitance],
+        "attr_偏差[]": [accuracy],
+        "orderBy": "minPrice",
+        "sort": "asc"
     }
 
-    #aggText = getJosntext(aggAttrApi,specAttr)
+    productDic = getJosn(searchApi,specAttr)
+    price = productDic['priceModelList']
+    print(productDic)
+    productPrice['品牌'] = productDic['brandName']
 
-    aggText = getJosntext(searchApi,specAttr)
+    if len(price) == 0:  # 无价格
+        productPrice['price'] = ''
+        productPrice['Flag'] = False
+        productPrice['Msgbox'] = '暂无价格'
+    elif len(price) == 1:
+        productPrice['price'] = price[0]['price']  # 仅此一个价格
+        return productPrice
+    else:
+        # 获取所有价格
+        for i in range(0, len(price)):
+            priceArr.append(int(price[i]['stepNum']))
+
+        if orderCount in priceArr:
+            indexNum = priceArr.index(orderCount)
+            productPrice['price'] = price[indexNum]['price']
+        else:
+            # 将订单数据添加至列表，并重新排序
+            priceArr.append(orderCount)
+            priceArr.sort()
+            # 获取指定元素orderCount,index
+            print(type(priceArr))
+            indexNum = priceArr.index(orderCount)
+
+            # 最终确认价格
+            productPrice['price'] = price[indexNum - 1]['price']
+
+    return productPrice
+
+if __name__ == '__main__':
+    print(getPrice(2000,'100nF','0402','16V','±20%'))
+
 
 
 
