@@ -229,7 +229,6 @@ def getPrice(orderCount,capacitance,package,voltage,accuracy):
 
     productDic = getJosn(searchApi,specAttr)
     price = productDic['priceModelList']
-    print(productDic)
     productPrice['品牌'] = productDic['brandName']
 
     if len(price) == 0:  # 无价格
@@ -252,7 +251,6 @@ def getPrice(orderCount,capacitance,package,voltage,accuracy):
             priceArr.append(orderCount)
             priceArr.sort()
             # 获取指定元素orderCount,index
-            print(type(priceArr))
             indexNum = priceArr.index(orderCount)
 
             # 最终确认价格
