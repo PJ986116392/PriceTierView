@@ -1,10 +1,8 @@
-import requests, urllib, bs4, re, string
-from bs4 import BeautifulSoup
+import requests, urllib,re,string
 from urllib.parse import urlencode
 from urllib.parse import quote_plus
 from DecryptToken import getSearchToken
 import json,random
-import numpy as np
 import time
 
 def getToken():

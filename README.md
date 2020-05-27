@@ -22,6 +22,10 @@
                 - 解密搜索引擎搜索，发现https://www.sojson.com/question/69720496242191535293.html，由讲解，有专门的人进行解密工作，需要付费，添加微信，将加密源文件发给解密工作人员，最终得到解密js代码
                 - 将js代码转换成python代码,这里使用execjs 库进行快速导入js文件执行代码：https://www.jianshu.com/p/df4ae2374a68
         - _ : 多次使用浏览器模拟，发现前面几位始终不变，仅最后两位有变化，猜测与时间有关，查找相关视频最终确认为时间浮点数
+ - VB调用Python
+ - 教程：https://www.jianshu.com/p/e60f8e057cba
+ - python3.7安装pywin32模块：https://www.cnblogs.com/fcc-123/p/12002354.html
+ - Windows管理员权限运行Python代码
         
   
  
