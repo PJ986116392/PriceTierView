@@ -23,10 +23,9 @@ def getToken():
             htmlText = resp.text
             token = re.search('"token": getSearchToken(.*)', htmlText).group(0).split(',')[1][2:-2]
             xlsToken = re.search('"xlsToken": getSearchToken(.*)', htmlText).group(0).split(',')[1][2:-3]
-            return token,xlsToken
+            return "webToken获取成功",token,xlsToken
     except:
-        print("token请求超时")
-        exit()
+        return "webToken获取失败", "", ""
 
 def getUrl(api,specAttr):
     # 处理url
@@ -158,7 +157,7 @@ def specJudgment(aggAttrApi,capacitance,package,voltage,accuracy):
         return True, msgbox
 
 
-def getPrice(orderCount,capacitance,package,voltage,accuracy):
+def pythonGetPrice(orderCount,capacitance,package,voltage,accuracy):
     '''
     从唯详商城获取指定电容最低价格
     :param orderCount:      采购数量
@@ -201,7 +200,7 @@ def getPrice(orderCount,capacitance,package,voltage,accuracy):
         return productPrice
 
     # 电容参数正确，执行查找价格
-    webToken,webXlstoken = getToken()
+    respText,webToken,webXlstoken = getToken()
     token = getSearchToken(webToken)
     xlstoken = getSearchToken(webXlstoken)
 
@@ -257,7 +256,7 @@ def getPrice(orderCount,capacitance,package,voltage,accuracy):
     return productPrice
 
 if __name__ == '__main__':
-    print(getPrice(2000,'100nF','0402','16V','±20%'))
+    print(pythonGetPrice(2000,'100nF','0402','16V','±20%'))
 
 
 

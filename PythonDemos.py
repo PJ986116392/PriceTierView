@@ -1,15 +1,15 @@
 #需要先安装pipywin32模块
-import pythoncom
+import pythoncom,json
 import PriceTierView
 from DecryptToken import getSearchToken
 
 class PythonUtilities:
 
-    _public_methods_=['SplitString']
-    _reg_progid_='PythonDemos.Utilities'
-    _reg_clsid_=pythoncom.CreateGuid()
+    _public_methods_=['VbgetPrice']                 # 对外调用函数名称
+    _reg_progid_='PythonDemos.Utilities'            # 对外申请Com接口
+    _reg_clsid_=pythoncom.CreateGuid()              # 获取本机注册码
 
-    def getPrice(self, orderCount, capacitance, package, voltage, accuracy):
+    def VbgetPrice(self,orderCount, capacitance, package, voltage, accuracy):
         '''
         从唯详商城获取指定电容最低价格
         :param orderCount:      采购数量
@@ -25,11 +25,12 @@ class PythonUtilities:
             'Msgbox':''         # 提示字符串
         }
         '''
-
-        # 判断请购数量
-        if orderCount < 1:
-            print('采购数量有误，请确认！')
-            exit()
+        # 声明变量类型
+        orderCount = int(orderCount)
+        capacitance =str(capacitance)
+        package = str(package)
+        voltage = str(voltage)
+        accuracy = str(accuracy)
 
         # 初始化返回值
         productPrice = {
@@ -38,6 +39,13 @@ class PythonUtilities:
             'price': '',
             'Msgbox': ''
         }
+
+        # 判断请购数量
+        if orderCount < 1:
+            productPrice['Flag'] = False
+            productPrice['Msgbox'] = '订单数量有误'
+            return json.dumps(productPrice).encode('utf-8').decode('unicode_escape')
+
         priceArr = []
 
         # 设置搜索引擎
@@ -46,13 +54,20 @@ class PythonUtilities:
 
         flag, msg = PriceTierView.specJudgment(aggAttrApi, capacitance, package, voltage, accuracy)
         productPrice['Msgbox'] = msg
+
         # 判断输入电容规格参数是否有误
         if flag == False:
             productPrice['Flag'] = False
-            return productPrice
+            return json.dumps(productPrice).encode('utf-8').decode('unicode_escape')
 
         # 电容参数正确，执行查找价格
-        webToken, webXlstoken = PriceTierView.getToken()
+        respText,webToken, webXlstoken = PriceTierView.getToken()
+
+        if respText == "webToken获取失败":
+            productPrice['Flag'] = False
+            productPrice['Msgbox'] = "webToken获取失败"
+            return json.dumps(productPrice).encode('utf-8').decode('unicode_escape')
+
         token = getSearchToken(webToken)
         xlstoken = getSearchToken(webXlstoken)
 
@@ -86,7 +101,7 @@ class PythonUtilities:
             productPrice['Msgbox'] = '暂无价格'
         elif len(price) == 1:
             productPrice['price'] = price[0]['price']  # 仅此一个价格
-            return productPrice
+            return json.dumps(productPrice).encode('utf-8').decode('unicode_escape')
         else:
             # 获取所有价格
             for i in range(0, len(price)):
@@ -105,7 +120,19 @@ class PythonUtilities:
                 # 最终确认价格
                 productPrice['price'] = price[indexNum - 1]['price']
 
-        return productPrice
+        return json.dumps(productPrice).encode('utf-8').decode('unicode_escape')
+
+# VBA 代码
+'''
+Private Sub text()
+
+    Set PythonUtils = CreateObject("PythonDemos.Utilities")
+    
+    ss = PythonUtils.VbgetPrice(10000, "100nF", "0402", "16V", "±20%")
+
+End Sub
+'''
+
 
 if __name__=='__main__':
     print ('Registering COM server...')

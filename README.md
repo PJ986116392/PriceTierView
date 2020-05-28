@@ -24,8 +24,16 @@
         - _ : 多次使用浏览器模拟，发现前面几位始终不变，仅最后两位有变化，猜测与时间有关，查找相关视频最终确认为时间浮点数
  - VB调用Python
  - 教程：https://www.jianshu.com/p/e60f8e057cba
- - python3.7安装pywin32模块：https://www.cnblogs.com/fcc-123/p/12002354.html
- - Windows管理员权限运行Python代码
-        
-  
+ - 环境准备工作
+    - python3.7安装pywin32模块：https://www.cnblogs.com/fcc-123/p/12002354.html
+    - Windows管理员权限运行Python代码（编写cmd）：https://blog.csdn.net/MemoryD/article/details/83148305
+ - 代码编写注意事项：
+    - 注册COM（注册一次后，永久有效，Python中可随时更改代码，不用重新注册，如需删除com，管理员模式运行命令：python py_name.py --unregister）
+        - _public_methods_=['VbgetPrice']   指定对外可调用函数为VbgetPrice
+        - _reg_progid_='PythonDemos.Utilities'  指定vba调用com接口名称，vba中只能通过CreateObject("PythonDemos.Utilities")连接此com口
+        - _reg_clsid_=pythoncom.CreateGuid()    获取本机注册码并赋值，注意每次运行注册码都不一样
+    - 定义类
+        - 自定义被调函数（对象）形参第一个通常为self，其他自定义形参需要进入函数后第一步声明变量类型，否则vba会调用报错（自动化失败）
+        - 函数返回值不能是字典，目前已知可返回数据类型为字符串
+        - 保持网络畅通，否则容易爬取失败，不能返回有效值，各种错误有待完善
  
